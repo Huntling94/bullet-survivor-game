@@ -156,7 +156,188 @@
 - [ ] All pre-commit gates pass
 - [ ] `npm run build` succeeds
 
-## 8. How this sets up F-004
+## 8. Solution design (retroactive)
+
+### Interfaces and types
+
+```typescript
+// src/entities/types.ts — Shared shape for all game entities
+interface Entity {
+  position: Vector2;
+  readonly radius: number;
+  active: boolean; // false = skip update/render, eligible for cleanup
+}
+
+// src/entities/enemy.ts — Data-driven enemy configuration
+type EnemyType = "shambler" | "runner";
+
+interface EnemyConfig {
+  readonly type: EnemyType;
+  readonly speed: number; // pixels per second
+  readonly radius: number; // collision radius
+  readonly maxHealth: number;
+  readonly color: string; // CSS color
+  readonly damage: number; // contact damage to player
+}
+
+// Two configs define two enemy types — one class, two data sets:
+const ENEMY_CONFIGS: Record<EnemyType, EnemyConfig> = {
+  shambler: {
+    speed: 60,
+    radius: 12,
+    maxHealth: 30,
+    color: "#e53935",
+    damage: 10,
+  },
+  runner: { speed: 120, radius: 8, maxHealth: 15, color: "#ff9800", damage: 5 },
+};
+
+// src/systems/spawner.ts — What the spawner tells the game to create
+interface SpawnInstruction {
+  type: EnemyType;
+  position: Vector2;
+}
+```
+
+### Key classes
+
+```typescript
+// src/entities/enemy.ts — Config-driven entity with chase AI
+class Enemy implements Entity {
+  position: Vector2;
+  readonly radius: number; // from config
+  readonly config: EnemyConfig;
+  health: number;
+  active: boolean;
+
+  constructor(position: Vector2, config: EnemyConfig);
+  update(dt: number, target: Vector2): void; // move toward target
+  render(ctx: CanvasRenderingContext2D): void;
+}
+
+// src/entities/player.ts — Updated with damage system
+class Player implements Entity {
+  // ... existing fields ...
+  invincibilityTimer: number;
+
+  get isInvincible(): boolean; // invincibilityTimer > 0
+  takeDamage(amount: number): void; // reduces health, starts i-frames
+  update(dt: number, input: InputState): void; // also ticks down i-timer
+  render(ctx: CanvasRenderingContext2D): void; // flickers during i-frames
+}
+
+// src/systems/spawner.ts — Wave progression and spawn timing
+class Spawner {
+  waveNumber: number;
+  get maxEnemies(): number; // 30 + 5 per wave
+
+  update(dt, playerPos, screenW, screenH, activeCount): SpawnInstruction[];
+  getDespawnRadius(screenW, screenH): number;
+}
+```
+
+### Key logic: enemy chase AI (src/entities/enemy.ts)
+
+```typescript
+update(dt: number, target: Vector2): void {
+  if (!this.active) return;
+  const direction = target.subtract(this.position).normalize();
+  this.position = this.position.add(direction.scale(this.config.speed * dt));
+}
+```
+
+One line of actual logic: `(target - position).normalize() * speed * dt`. This is the simplest possible AI and it's sufficient for the entire game. The normalize ensures all enemies move at their config speed regardless of distance or angle.
+
+### Key logic: collision detection (src/systems/collision.ts)
+
+```typescript
+// Pure geometry — no game-specific knowledge
+function circlesOverlap(
+  posA: Vector2,
+  radiusA: number,
+  posB: Vector2,
+  radiusB: number,
+): boolean {
+  const dx = posA.x - posB.x;
+  const dy = posA.y - posB.y;
+  const distSq = dx * dx + dy * dy; // distance² (avoids sqrt)
+  const radiiSum = radiusA + radiusB;
+  return distSq < radiiSum * radiiSum; // compare squares, not roots
+}
+
+// Game-specific: applies contact damage once, then i-frames prevent more
+function checkPlayerEnemyCollisions(player: Player, enemies: Enemy[]): void {
+  if (!player.active || player.isInvincible) return;
+  for (const enemy of enemies) {
+    if (!enemy.active) continue;
+    if (
+      circlesOverlap(
+        player.position,
+        player.radius,
+        enemy.position,
+        enemy.radius,
+      )
+    ) {
+      player.takeDamage(enemy.config.damage);
+      return; // only one hit per frame — i-frames kick in immediately
+    }
+  }
+}
+```
+
+**Why distance² instead of distance?** `Math.sqrt()` is expensive. Since we're comparing `dist < sum`, we can compare `dist² < sum²` and skip the square root entirely. Same result, fewer CPU cycles. This matters when checking hundreds of enemies per frame.
+
+### Key logic: invincibility frames (src/entities/player.ts)
+
+```typescript
+takeDamage(amount: number): void {
+  if (this.isInvincible) return;           // blocked during i-frames
+  this.health = Math.max(0, this.health - amount);
+  this.invincibilityTimer = 1.0;           // 1 second of immunity
+}
+
+// In render():
+if (this.isInvincible) {
+  const flicker = Math.sin(this.invincibilityTimer * FLICKER_RATE * Math.PI * 2);
+  ctx.globalAlpha = flicker > 0 ? 1.0 : 0.3;   // oscillates visible/dim
+}
+```
+
+The flicker uses `sin()` to oscillate between fully visible and dim. As the timer counts down from 1.0 to 0, the sin wave produces ~10 flicker cycles (FLICKER_RATE = 10).
+
+### Key logic: spawn positioning (src/systems/spawner.ts)
+
+```typescript
+private getSpawnPosition(playerPos: Vector2, screenW: number, screenH: number): Vector2 {
+  const radius = Math.sqrt(screenW² + screenH²) / 2 + SPAWN_MARGIN;  // viewport diagonal + buffer
+  const angle = Math.random() * Math.PI * 2;                          // random direction
+  return new Vector2(
+    playerPos.x + Math.cos(angle) * radius,
+    playerPos.y + Math.sin(angle) * radius,
+  );
+}
+```
+
+The viewport diagonal ensures enemies are always off-screen regardless of spawn angle. A margin of 50px adds buffer so they don't appear at the very edge.
+
+### Game update loop order (src/game.ts)
+
+```
+1. player.update(dt, input)              — move player
+2. spawner.update(...)                   — get spawn instructions
+3. create Enemy objects from instructions
+4. enemy.update(dt, player.position)     — all enemies chase player
+5. despawn far enemies (distance > 2× spawn radius)
+6. remove inactive from array
+7. checkPlayerEnemyCollisions()          — contact damage
+8. check death (health ≤ 0 → gameOver)
+9. camera.update(player.position)        — follow player
+10. FPS counter
+```
+
+Order matters: player moves first (so collision checks are against the new position), enemies move second, collision happens after both have moved.
+
+## 9. How this sets up F-004
 
 The architecture here directly supports projectiles:
 

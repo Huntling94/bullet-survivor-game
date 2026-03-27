@@ -111,7 +111,119 @@
 | Key stuck on tab-switch           | Low      | High       | InputHandler clears all keys on window blur            |
 | Float precision in movement tests | Low      | Medium     | Use toBeCloseTo() not toBe() for position assertions   |
 
-## 7. Acceptance criteria
+## 7. Solution design (retroactive)
+
+### Interfaces and types
+
+```typescript
+// src/systems/input.ts — Testable contract for input state
+interface InputState {
+  readonly up: boolean;
+  readonly down: boolean;
+  readonly left: boolean;
+  readonly right: boolean;
+}
+
+// In tests, just pass a plain object:
+//   { up: true, down: false, left: false, right: false }
+// In production, InputHandler (which implements InputState) is injected.
+```
+
+### Key classes
+
+```typescript
+// src/systems/input.ts — Concrete DOM implementation
+class InputHandler implements InputState {
+  private keys: Set<keyof InputState>;
+
+  get up(): boolean; // computed from key set
+  get down(): boolean;
+  get left(): boolean;
+  get right(): boolean;
+
+  handleKeyDown(key: string): void; // maps WASD/arrows → direction
+  handleKeyUp(key: string): void;
+  clearAll(): void; // called on window blur
+  bindEvents(target: Window): void; // thin wrapper over addEventListener
+}
+
+// src/entities/player.ts — First entity. Sets the pattern for all others.
+class Player {
+  position: Vector2;
+  readonly radius: number; // = 16
+  readonly maxHealth: number; // = 100
+  health: number;
+
+  update(dt: number, input: InputState): void;
+  render(ctx: CanvasRenderingContext2D): void;
+}
+
+// src/systems/camera.ts — World-to-screen coordinate transform
+class Camera {
+  position: Vector2;
+
+  update(target: Vector2, _dt: number): void; // snap to target (dt reserved for smooth follow)
+  applyTransform(ctx, screenWidth, screenHeight): void; // ctx.save() + ctx.translate()
+  resetTransform(ctx): void; // ctx.restore()
+}
+```
+
+### Key logic: diagonal normalization (src/entities/player.ts)
+
+```typescript
+update(dt: number, input: InputState): void {
+  let dx = 0, dy = 0;
+  if (input.up)    dy -= 1;   // up = negative Y (canvas convention)
+  if (input.down)  dy += 1;
+  if (input.left)  dx -= 1;
+  if (input.right) dx += 1;
+
+  const direction = new Vector2(dx, dy).normalize();  // ← this is the key line
+  this.position = this.position.add(direction.scale(PLAYER_SPEED * dt));
+}
+```
+
+**Why normalize?** Without it, pressing W+D gives direction (1, -1) with magnitude √2 ≈ 1.41. You'd move 41% faster diagonally. `normalize()` scales it to magnitude 1, so `PLAYER_SPEED * dt` is the same in all 8 directions. The `normalize()` also handles the zero-vector case (no keys pressed → ZERO → no movement) with no special case needed.
+
+### Key logic: camera transform bracket (src/game.ts render)
+
+```typescript
+render(ctx: CanvasRenderingContext2D): void {
+  ctx.fillRect(0, 0, this.width, this.height);  // clear
+
+  // Everything between these two calls draws in WORLD coordinates
+  this.camera.applyTransform(ctx, this.width, this.height);
+    this.renderGrid(ctx);     // world space
+    this.player.render(ctx);  // world space
+  this.camera.resetTransform(ctx);
+
+  // Everything after draws in SCREEN coordinates
+  ctx.fillText(`FPS: ${this.fps}`, 10, 20);  // screen space
+}
+```
+
+**The math inside applyTransform:**
+
+```typescript
+ctx.translate(screenWidth / 2 - camera.x, screenHeight / 2 - camera.y);
+```
+
+If the camera is at world position (100, 200) on an 800×600 screen, this translates by (300, 100). A game object at world (100, 200) would draw at screen (400, 300) — the center. That's the whole trick.
+
+### Dependency injection pattern (src/main.ts → src/game.ts)
+
+```typescript
+// main.ts creates the DOM-coupled object
+const input = new InputHandler();
+input.bindEvents(window);
+
+// Game receives the interface, not the class
+const game = new Game(width, height, input); // input typed as InputState
+```
+
+Game never touches the DOM. This pattern repeats for every future browser dependency.
+
+## 8. Acceptance criteria
 
 - [ ] WASD and arrow keys move a circle on screen
 - [ ] Movement speed is consistent in all 8 directions (diagonal normalized)
