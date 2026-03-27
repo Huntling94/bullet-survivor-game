@@ -1,4 +1,5 @@
 import { Game } from "./game";
+import { InputHandler } from "./systems/input";
 
 const MAX_DELTA_TIME = 0.1;
 
@@ -14,7 +15,10 @@ if (!ctx) {
 // that TypeScript knows is non-null.
 const renderCtx: CanvasRenderingContext2D = ctx;
 
-const game = new Game(window.innerWidth, window.innerHeight);
+const input = new InputHandler();
+input.bindEvents(window);
+
+const game = new Game(window.innerWidth, window.innerHeight, input);
 
 function handleResize(): void {
   canvas.width = window.innerWidth;
