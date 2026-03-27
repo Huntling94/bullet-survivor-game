@@ -1,12 +1,19 @@
 import { Player } from "./entities/player";
+import { Enemy, ENEMY_CONFIGS } from "./entities/enemy";
 import { Camera } from "./systems/camera";
 import { InputState } from "./systems/input";
+import { Spawner } from "./systems/spawner";
+import { checkPlayerEnemyCollisions } from "./systems/collision";
 
 const FPS_UPDATE_INTERVAL = 0.5;
 const FPS_FONT = "14px monospace";
 const FPS_COLOR = "#0f0";
+const HUD_FONT = "14px monospace";
+const HUD_COLOR = "#fff";
 const FPS_X = 10;
 const FPS_Y = 20;
+const WAVE_HUD_X = 10;
+const WAVE_HUD_Y = 40;
 
 export class Game {
   width: number;
@@ -15,6 +22,8 @@ export class Game {
 
   readonly player: Player;
   readonly camera: Camera;
+  readonly spawner: Spawner;
+  enemies: Enemy[] = [];
   private readonly input: InputState;
 
   private fpsAccumulator: number = 0;
@@ -26,6 +35,7 @@ export class Game {
     this.input = input;
     this.player = new Player();
     this.camera = new Camera();
+    this.spawner = new Spawner();
   }
 
   resize(width: number, height: number): void {
@@ -35,11 +45,51 @@ export class Game {
 
   update(dt: number): void {
     this.player.update(dt, this.input);
+
+    // Spawn enemies
+    const activeCount = this.enemies.filter((e) => e.active).length;
+    const instructions = this.spawner.update(
+      dt,
+      this.player.position,
+      this.width,
+      this.height,
+      activeCount,
+    );
+    for (const inst of instructions) {
+      this.enemies.push(new Enemy(inst.position, ENEMY_CONFIGS[inst.type]));
+    }
+
+    // Update enemies
+    for (const enemy of this.enemies) {
+      enemy.update(dt, this.player.position);
+    }
+
+    // Despawn far enemies
+    const despawnRadius = this.spawner.getDespawnRadius(
+      this.width,
+      this.height,
+    );
+    for (const enemy of this.enemies) {
+      if (
+        enemy.active &&
+        enemy.position.distanceTo(this.player.position) > despawnRadius
+      ) {
+        enemy.active = false;
+      }
+    }
+
+    // Remove inactive enemies from array
+    this.enemies = this.enemies.filter((e) => e.active);
+
+    // Collision
+    checkPlayerEnemyCollisions(this.player, this.enemies);
+
+    // Camera
     this.camera.update(this.player.position, dt);
 
+    // FPS
     this.fpsAccumulator += dt;
     this.fpsFrameCount++;
-
     if (this.fpsAccumulator >= FPS_UPDATE_INTERVAL) {
       this.fps = Math.round(this.fpsFrameCount / this.fpsAccumulator);
       this.fpsAccumulator = 0;
@@ -51,7 +101,6 @@ export class Game {
     const gridSize = 64;
     const color = "#1a1a1a";
 
-    // Calculate visible grid range based on camera position
     const startX =
       Math.floor((this.camera.position.x - this.width / 2) / gridSize) *
       gridSize;
@@ -87,6 +136,9 @@ export class Game {
     // World space rendering (inside camera transform)
     this.camera.applyTransform(ctx, this.width, this.height);
     this.renderGrid(ctx);
+    for (const enemy of this.enemies) {
+      enemy.render(ctx);
+    }
     this.player.render(ctx);
     this.camera.resetTransform(ctx);
 
@@ -95,5 +147,9 @@ export class Game {
     ctx.font = FPS_FONT;
     ctx.textBaseline = "top";
     ctx.fillText(`FPS: ${this.fps}`, FPS_X, FPS_Y);
+
+    ctx.fillStyle = HUD_COLOR;
+    ctx.font = HUD_FONT;
+    ctx.fillText(`Wave ${this.spawner.waveNumber}`, WAVE_HUD_X, WAVE_HUD_Y);
   }
 }
