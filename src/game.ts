@@ -10,6 +10,9 @@ const FPS_FONT = "14px monospace";
 const FPS_COLOR = "#0f0";
 const HUD_FONT = "14px monospace";
 const HUD_COLOR = "#fff";
+const GAME_OVER_FONT = "48px monospace";
+const GAME_OVER_SUB_FONT = "18px monospace";
+const GAME_OVER_COLOR = "#e53935";
 const FPS_X = 10;
 const FPS_Y = 20;
 const WAVE_HUD_X = 10;
@@ -24,6 +27,8 @@ export class Game {
   readonly camera: Camera;
   readonly spawner: Spawner;
   enemies: Enemy[] = [];
+  gameOver: boolean = false;
+  private survivalTime: number = 0;
   private readonly input: InputState;
 
   private fpsAccumulator: number = 0;
@@ -44,7 +49,10 @@ export class Game {
   }
 
   update(dt: number): void {
+    if (this.gameOver) return;
+
     this.player.update(dt, this.input);
+    this.survivalTime += dt;
 
     // Spawn enemies
     const activeCount = this.enemies.filter((e) => e.active).length;
@@ -83,6 +91,12 @@ export class Game {
 
     // Collision
     checkPlayerEnemyCollisions(this.player, this.enemies);
+
+    // Check death
+    if (this.player.health <= 0) {
+      this.gameOver = true;
+      return;
+    }
 
     // Camera
     this.camera.update(this.player.position, dt);
@@ -151,5 +165,29 @@ export class Game {
     ctx.fillStyle = HUD_COLOR;
     ctx.font = HUD_FONT;
     ctx.fillText(`Wave ${this.spawner.waveNumber}`, WAVE_HUD_X, WAVE_HUD_Y);
+
+    // Game over overlay
+    if (this.gameOver) {
+      ctx.fillStyle = "rgba(0, 0, 0, 0.7)";
+      ctx.fillRect(0, 0, this.width, this.height);
+
+      ctx.fillStyle = GAME_OVER_COLOR;
+      ctx.font = GAME_OVER_FONT;
+      ctx.textAlign = "center";
+      ctx.textBaseline = "middle";
+      ctx.fillText("GAME OVER", this.width / 2, this.height / 2 - 30);
+
+      const seconds = Math.floor(this.survivalTime);
+      ctx.fillStyle = HUD_COLOR;
+      ctx.font = GAME_OVER_SUB_FONT;
+      ctx.fillText(
+        `Wave ${this.spawner.waveNumber} — ${seconds}s survived`,
+        this.width / 2,
+        this.height / 2 + 20,
+      );
+      ctx.fillText("Refresh to restart", this.width / 2, this.height / 2 + 50);
+
+      ctx.textAlign = "start";
+    }
   }
 }

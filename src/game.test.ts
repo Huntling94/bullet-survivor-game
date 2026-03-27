@@ -25,6 +25,7 @@ function mockCtx(): CanvasRenderingContext2D {
     stroke: vi.fn(),
     strokeStyle: "",
     lineWidth: 1,
+    textAlign: "start" as CanvasTextAlign,
   } as unknown as CanvasRenderingContext2D;
 }
 
@@ -97,5 +98,35 @@ describe("Game", () => {
     game.update(2.1); // spawn enemies
     expect(game.enemies.length).toBeGreaterThan(0);
     expect(() => game.render(mockCtx())).not.toThrow();
+  });
+
+  it("game over when player health reaches 0", () => {
+    const game = new Game(800, 600, noInput());
+    expect(game.gameOver).toBe(false);
+    // Manually kill the player
+    game.player.takeDamage(100);
+    game.update(1.1); // advance past i-frames (shouldn't matter, health already 0)
+    // Need to trigger the death check — set health to 0 directly since
+    // takeDamage won't re-trigger during i-frames
+    game.player.health = 0;
+    game.update(0.016);
+    expect(game.gameOver).toBe(true);
+  });
+
+  it("update stops when game is over", () => {
+    const game = new Game(800, 600, noInput());
+    game.player.health = 0;
+    game.update(0.016); // triggers game over
+    const playerPos = game.player.position.clone();
+    game.update(10); // should do nothing
+    expect(game.player.position.equals(playerPos)).toBe(true);
+  });
+
+  it("render game over does not throw", () => {
+    const game = new Game(800, 600, noInput());
+    game.player.health = 0;
+    game.update(0.016);
+    const ctx = mockCtx();
+    expect(() => game.render(ctx)).not.toThrow();
   });
 });
