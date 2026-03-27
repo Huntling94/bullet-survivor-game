@@ -186,7 +186,7 @@ Step 6 is the most important step for learning. Spend the most time here.
 
 | #     | Feature                                        | Status      |
 | ----- | ---------------------------------------------- | ----------- |
-| F-001 | Canvas + game loop with delta time             | Not started |
+| F-001 | Canvas + game loop with delta time             | Complete    |
 | F-002 | Player movement with camera follow             | Not started |
 | F-003 | Enemy spawning and wave system                 | Not started |
 | F-004 | Projectile system with auto-aim                | Not started |
