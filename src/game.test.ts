@@ -19,6 +19,11 @@ function mockCtx(): CanvasRenderingContext2D {
     beginPath: vi.fn(),
     arc: vi.fn(),
     fill: vi.fn(),
+    moveTo: vi.fn(),
+    lineTo: vi.fn(),
+    stroke: vi.fn(),
+    strokeStyle: "",
+    lineWidth: 1,
   } as unknown as CanvasRenderingContext2D;
 }
 

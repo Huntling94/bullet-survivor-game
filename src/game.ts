@@ -47,6 +47,38 @@ export class Game {
     }
   }
 
+  private renderGrid(ctx: CanvasRenderingContext2D): void {
+    const gridSize = 64;
+    const color = "#1a1a1a";
+
+    // Calculate visible grid range based on camera position
+    const startX =
+      Math.floor((this.camera.position.x - this.width / 2) / gridSize) *
+      gridSize;
+    const startY =
+      Math.floor((this.camera.position.y - this.height / 2) / gridSize) *
+      gridSize;
+    const endX = startX + this.width + gridSize;
+    const endY = startY + this.height + gridSize;
+
+    ctx.strokeStyle = color;
+    ctx.lineWidth = 1;
+
+    for (let x = startX; x <= endX; x += gridSize) {
+      ctx.beginPath();
+      ctx.moveTo(x, startY);
+      ctx.lineTo(x, endY);
+      ctx.stroke();
+    }
+
+    for (let y = startY; y <= endY; y += gridSize) {
+      ctx.beginPath();
+      ctx.moveTo(startX, y);
+      ctx.lineTo(endX, y);
+      ctx.stroke();
+    }
+  }
+
   render(ctx: CanvasRenderingContext2D): void {
     // Clear entire screen
     ctx.fillStyle = "#000";
@@ -54,6 +86,7 @@ export class Game {
 
     // World space rendering (inside camera transform)
     this.camera.applyTransform(ctx, this.width, this.height);
+    this.renderGrid(ctx);
     this.player.render(ctx);
     this.camera.resetTransform(ctx);
 
