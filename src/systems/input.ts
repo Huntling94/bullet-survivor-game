@@ -51,8 +51,18 @@ export class InputHandler implements InputState {
   }
 
   bindEvents(target: Window): void {
-    target.addEventListener("keydown", (e) => this.handleKeyDown(e.key));
-    target.addEventListener("keyup", (e) => this.handleKeyUp(e.key));
+    target.addEventListener("keydown", (e) => {
+      if (KEY_MAP[e.key.toLowerCase()]) {
+        e.preventDefault();
+      }
+      this.handleKeyDown(e.key);
+    });
+    target.addEventListener("keyup", (e) => {
+      if (KEY_MAP[e.key.toLowerCase()]) {
+        e.preventDefault();
+      }
+      this.handleKeyUp(e.key);
+    });
     target.addEventListener("blur", () => this.clearAll());
   }
 }
