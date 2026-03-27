@@ -178,9 +178,9 @@ Step 6 is the most important step for learning. Spend the most time here.
 
 ## Lessons learned
 
-| #   | Lesson | Root Cause | Prevention Rule |
-| --- | ------ | ---------- | --------------- |
-|     |        |            |                 |
+| #   | Lesson                                                                                                 | Root Cause                                     | Prevention Rule                                                                                   |
+| --- | ------------------------------------------------------------------------------------------------------ | ---------------------------------------------- | ------------------------------------------------------------------------------------------------- |
+| 1   | Camera-follow on a blank background makes movement invisible — always provide a visual reference frame | No background elements to show relative motion | When adding camera follow, always include a grid or background pattern so movement is perceivable |
 
 ## Feature registry
 
