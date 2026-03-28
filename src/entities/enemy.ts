@@ -16,6 +16,7 @@ export interface EnemyConfig {
   readonly maxHealth: number;
   readonly color: string;
   readonly damage: number;
+  readonly xpValue: number;
 }
 
 export const ENEMY_CONFIGS: Record<EnemyType, EnemyConfig> = {
@@ -26,6 +27,7 @@ export const ENEMY_CONFIGS: Record<EnemyType, EnemyConfig> = {
     maxHealth: 30,
     color: "#e53935",
     damage: 10,
+    xpValue: 3,
   },
   runner: {
     type: "runner",
@@ -34,6 +36,7 @@ export const ENEMY_CONFIGS: Record<EnemyType, EnemyConfig> = {
     maxHealth: 15,
     color: "#ff9800",
     damage: 5,
+    xpValue: 1,
   },
 };
 
@@ -44,6 +47,7 @@ export class Enemy implements Entity {
   readonly config: EnemyConfig;
   health: number;
   active: boolean = true;
+  killed: boolean = false;
 
   constructor(position: Vector2, config: EnemyConfig) {
     this.position = position;
@@ -58,6 +62,7 @@ export class Enemy implements Entity {
     this.health = Math.max(0, this.health - amount);
     if (this.health <= 0) {
       this.active = false;
+      this.killed = true;
     }
   }
 

@@ -78,6 +78,13 @@ describe("Enemy", () => {
     enemy.takeDamage(30);
     expect(enemy.health).toBe(0);
     expect(enemy.active).toBe(false);
+    expect(enemy.killed).toBe(true);
+  });
+
+  it("killed is false when despawned (not killed by damage)", () => {
+    const enemy = new Enemy(Vector2.ZERO, ENEMY_CONFIGS.shambler);
+    enemy.active = false;
+    expect(enemy.killed).toBe(false);
   });
 
   it("takeDamage clamps health to zero", () => {
