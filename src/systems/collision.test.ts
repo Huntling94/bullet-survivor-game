@@ -47,21 +47,23 @@ describe("circlesOverlap", () => {
 });
 
 describe("checkPlayerEnemyCollisions", () => {
-  it("damages player when enemy overlaps", () => {
+  it("damages player when enemy overlaps and returns result", () => {
     const player = new Player(Vector2.ZERO);
     const enemy = new Enemy(new Vector2(10, 0), ENEMY_CONFIGS.shambler);
-    // Player radius 16 + enemy radius 12 = 28 > distance 10
-    checkPlayerEnemyCollisions(player, [enemy]);
+    const result = checkPlayerEnemyCollisions(player, [enemy]);
     expect(player.health).toBe(
       player.maxHealth - ENEMY_CONFIGS.shambler.damage,
     );
+    expect(result).not.toBe(null);
+    expect(result?.damage).toBe(ENEMY_CONFIGS.shambler.damage);
   });
 
-  it("does not damage player when enemy is far", () => {
+  it("returns null when no collision", () => {
     const player = new Player(Vector2.ZERO);
     const enemy = new Enemy(new Vector2(500, 0), ENEMY_CONFIGS.shambler);
-    checkPlayerEnemyCollisions(player, [enemy]);
+    const result = checkPlayerEnemyCollisions(player, [enemy]);
     expect(player.health).toBe(player.maxHealth);
+    expect(result).toBe(null);
   });
 
   it("does not damage invincible player", () => {
@@ -120,16 +122,31 @@ describe("findNearestEnemy", () => {
 });
 
 describe("checkProjectileEnemyCollisions", () => {
-  it("damages enemy on overlap", () => {
+  it("damages enemy and returns hit result", () => {
     const p = new Projectile();
     p.activate(Vector2.ZERO, new Vector2(1, 0), DEFAULT_PROJECTILE_CONFIG, 1);
     const enemy = new Enemy(new Vector2(2, 0), ENEMY_CONFIGS.shambler);
-    // projectile radius 4 + enemy radius 12 = 16 > distance 2
-    checkProjectileEnemyCollisions([p], [enemy]);
+    const results = checkProjectileEnemyCollisions([p], [enemy]);
     expect(enemy.health).toBe(
       ENEMY_CONFIGS.shambler.maxHealth - DEFAULT_PROJECTILE_CONFIG.damage,
     );
-    expect(p.active).toBe(false); // pierce = 1, deactivated
+    expect(p.active).toBe(false);
+    expect(results.length).toBe(1);
+    expect(results[0]?.damage).toBe(DEFAULT_PROJECTILE_CONFIG.damage);
+    expect(results[0]?.enemyKilled).toBe(false);
+  });
+
+  it("reports kill in hit result", () => {
+    const p = new Projectile();
+    p.activate(
+      Vector2.ZERO,
+      new Vector2(1, 0),
+      { ...DEFAULT_PROJECTILE_CONFIG, damage: 999 },
+      1,
+    );
+    const enemy = new Enemy(new Vector2(2, 0), ENEMY_CONFIGS.shambler);
+    const results = checkProjectileEnemyCollisions([p], [enemy]);
+    expect(results[0]?.enemyKilled).toBe(true);
   });
 
   it("pierce lets projectile hit multiple enemies", () => {

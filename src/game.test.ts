@@ -12,7 +12,6 @@ function mockCtx(): CanvasRenderingContext2D {
   return {
     fillStyle: "",
     font: "",
-    textBaseline: "",
     globalAlpha: 1,
     fillRect: vi.fn(),
     fillText: vi.fn(),
@@ -29,6 +28,8 @@ function mockCtx(): CanvasRenderingContext2D {
     strokeStyle: "",
     lineWidth: 1,
     textAlign: "start" as CanvasTextAlign,
+    textBaseline: "alphabetic" as CanvasTextBaseline,
+    scale: vi.fn(),
   } as unknown as CanvasRenderingContext2D;
 }
 
@@ -107,14 +108,15 @@ describe("Game", () => {
     expect(game.leveling.currentXp).toBe(5);
   });
 
-  it("level up pauses game", () => {
+  it("level up triggers freeze then pauses game", () => {
     const game = new Game(800, 600, createInput());
-    // Add enough XP to level up (need 20 for level 1→2)
     for (let i = 0; i < 7; i++) {
       const gem = game.gemPool.acquire();
       gem.activate(game.player.position, 3);
     }
-    game.update(0.016);
+    game.update(0.016); // triggers level up → freeze timer starts
+    expect(game.paused).toBe(false); // still in freeze
+    game.update(0.4); // advance past freeze (0.3s)
     expect(game.paused).toBe(true);
     expect(game.leveling.pendingUpgradeChoices).not.toBe(null);
   });
@@ -122,15 +124,14 @@ describe("Game", () => {
   it("selecting upgrade resumes game", () => {
     const input = createInput();
     const game = new Game(800, 600, input);
-    // Trigger level up
     for (let i = 0; i < 7; i++) {
       const gem = game.gemPool.acquire();
       gem.activate(game.player.position, 3);
     }
     game.update(0.016);
+    game.update(0.4); // advance past freeze
     expect(game.paused).toBe(true);
 
-    // Select upgrade 1
     input.handleKeyDown("1");
     expect(game.paused).toBe(false);
     expect(game.leveling.pendingUpgradeChoices).toBe(null);
@@ -144,12 +145,12 @@ describe("Game", () => {
       gem.activate(game.player.position, 3);
     }
     game.update(0.016);
+    game.update(0.4); // advance past freeze
     expect(game.paused).toBe(true);
 
     const playerPos = game.player.position.clone();
-    input.handleKeyDown("d"); // try to move
+    input.handleKeyDown("d");
     game.update(1);
-    // Still paused, player hasn't moved
     expect(game.player.position.equals(playerPos)).toBe(true);
   });
 
@@ -160,6 +161,7 @@ describe("Game", () => {
       gem.activate(game.player.position, 3);
     }
     game.update(0.016);
+    game.update(0.4); // advance past freeze
     expect(game.paused).toBe(true);
     expect(() => game.render(mockCtx())).not.toThrow();
   });
