@@ -105,6 +105,12 @@ export class Game {
     this.screenFlash = new ScreenFlash();
 
     this.input.onKeyDown((key: string) => {
+      // Restart on game over
+      if (this.gameOver && key.toLowerCase() === "r") {
+        this.reset();
+        return;
+      }
+      // Upgrade selection during pause
       if (!this.paused || !this.leveling.pendingUpgradeChoices) return;
       const index = ["1", "2", "3"].indexOf(key);
       if (index === -1) return;
@@ -116,6 +122,28 @@ export class Game {
   resize(width: number, height: number): void {
     this.width = width;
     this.height = height;
+  }
+
+  reset(): void {
+    this.player.reset();
+    this.weapon.reset();
+    this.spawner.reset();
+    this.leveling.reset();
+    this.camera.reset();
+    this.enemies = [];
+    this.projectilePool.clear();
+    this.gemPool.clear();
+    this.particles.clear();
+    this.damageNumbers.clear();
+    this.gameOver = false;
+    this.paused = false;
+    this.survivalTime = 0;
+    this.freezeTimer = 0;
+    this.previousWaveNumber = 1;
+    this.waveTextTimer = 0;
+    this.xpBarFlashTimer = 0;
+    this.fpsAccumulator = 0;
+    this.fpsFrameCount = 0;
   }
 
   update(dt: number): void {
@@ -502,7 +530,7 @@ export class Game {
         this.width / 2,
         this.height / 2 + 20,
       );
-      ctx.fillText("Refresh to restart", this.width / 2, this.height / 2 + 50);
+      ctx.fillText("Press R to restart", this.width / 2, this.height / 2 + 50);
 
       ctx.textAlign = "start";
     }

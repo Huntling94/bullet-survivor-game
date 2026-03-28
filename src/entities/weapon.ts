@@ -37,4 +37,9 @@ export class Weapon {
   resetFireTimer(): void {
     this.fireTimer = this.stats.fireRate;
   }
+
+  reset(): void {
+    this.stats = { ...DEFAULT_WEAPON_STATS };
+    this.fireTimer = 0;
+  }
 }

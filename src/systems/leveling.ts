@@ -117,4 +117,10 @@ export class LevelingSystem {
     upgrade.apply(player, weaponStats);
     this.pendingUpgradeChoices = null;
   }
+
+  reset(): void {
+    this.level = 1;
+    this.currentXp = 0;
+    this.pendingUpgradeChoices = null;
+  }
 }

@@ -137,4 +137,8 @@ export class ParticleSystem {
   get activeCount(): number {
     return this.pool.activeLength;
   }
+
+  clear(): void {
+    this.pool.clear();
+  }
 }

@@ -29,6 +29,16 @@ export class Player implements Entity {
     this.position = position;
   }
 
+  reset(): void {
+    this.position = Vector2.ZERO;
+    this.health = DEFAULT_MAX_HEALTH;
+    this.maxHealth = DEFAULT_MAX_HEALTH;
+    this.speed = DEFAULT_SPEED;
+    this.pickupRadius = DEFAULT_PICKUP_RADIUS;
+    this.invincibilityTimer = 0;
+    this.active = true;
+  }
+
   get isInvincible(): boolean {
     return this.invincibilityTimer > 0;
   }

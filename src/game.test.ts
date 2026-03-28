@@ -180,4 +180,36 @@ describe("Game", () => {
     );
     expect(hasLevel).toBe(true);
   });
+
+  it("pressing R on game over restarts", () => {
+    const input = createInput();
+    const game = new Game(800, 600, input);
+    game.player.health = 0;
+    game.update(0.016);
+    expect(game.gameOver).toBe(true);
+
+    input.handleKeyDown("r");
+    expect(game.gameOver).toBe(false);
+    expect(game.player.health).toBe(100);
+    expect(game.enemies.length).toBe(0);
+    expect(game.leveling.level).toBe(1);
+    expect(game.spawner.waveNumber).toBe(1);
+  });
+
+  it("R does nothing when game is not over", () => {
+    const input = createInput();
+    const game = new Game(800, 600, input);
+    input.handleKeyDown("r");
+    expect(game.gameOver).toBe(false); // was already false, no crash
+  });
+
+  it("reset clears upgrades", () => {
+    const input = createInput();
+    const game = new Game(800, 600, input);
+    game.weapon.stats.damage = 999;
+    game.player.speed = 999;
+    game.reset();
+    expect(game.weapon.stats.damage).toBe(10);
+    expect(game.player.speed).toBe(200);
+  });
 });

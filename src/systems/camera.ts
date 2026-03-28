@@ -52,4 +52,11 @@ export class Camera {
   resetTransform(ctx: CanvasRenderingContext2D): void {
     ctx.restore();
   }
+
+  reset(): void {
+    this.position = Vector2.ZERO;
+    this.shakeIntensity = 0;
+    this.shakeDuration = 0;
+    this.shakeTimer = 0;
+  }
 }
