@@ -189,7 +189,7 @@ Step 6 is the most important step for learning. Spend the most time here.
 | F-001 | Canvas + game loop with delta time             | Complete    |
 | F-002 | Player movement with camera follow             | Complete    |
 | F-003 | Enemy spawning and wave system                 | Complete    |
-| F-004 | Projectile system with auto-aim                | Not started |
+| F-004 | Projectile system with auto-aim                | Complete    |
 | F-005 | XP gems, leveling, upgrade selection           | Not started |
 | F-006 | Juice: screen shake, particles, damage numbers | Not started |
 | F-007 | Polish: enemy variety, wave scaling, game over | Not started |
