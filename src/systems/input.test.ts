@@ -1,4 +1,4 @@
-import { describe, it, expect } from "vitest";
+import { describe, it, expect, vi } from "vitest";
 import { InputHandler, InputState } from "./input";
 
 describe("InputHandler", () => {
@@ -84,6 +84,35 @@ describe("InputHandler", () => {
     expect(input.right).toBe(true);
     expect(input.down).toBe(false);
     expect(input.left).toBe(false);
+  });
+});
+
+describe("InputHandler key callbacks", () => {
+  it("fires callback on key down", () => {
+    const input = new InputHandler();
+    const callback = vi.fn();
+    input.onKeyDown(callback);
+    input.handleKeyDown("1");
+    expect(callback).toHaveBeenCalledWith("1");
+  });
+
+  it("fires callback for any key including non-movement", () => {
+    const input = new InputHandler();
+    const callback = vi.fn();
+    input.onKeyDown(callback);
+    input.handleKeyDown("x");
+    expect(callback).toHaveBeenCalledWith("x");
+  });
+
+  it("fires multiple callbacks", () => {
+    const input = new InputHandler();
+    const cb1 = vi.fn();
+    const cb2 = vi.fn();
+    input.onKeyDown(cb1);
+    input.onKeyDown(cb2);
+    input.handleKeyDown("1");
+    expect(cb1).toHaveBeenCalled();
+    expect(cb2).toHaveBeenCalled();
   });
 });
 

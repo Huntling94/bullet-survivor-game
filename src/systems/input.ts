@@ -18,6 +18,7 @@ const KEY_MAP: Record<string, keyof InputState> = {
 
 export class InputHandler implements InputState {
   private keys = new Set<keyof InputState>();
+  private keyDownCallbacks: ((key: string) => void)[] = [];
 
   get up(): boolean {
     return this.keys.has("up");
@@ -32,10 +33,17 @@ export class InputHandler implements InputState {
     return this.keys.has("right");
   }
 
+  onKeyDown(callback: (key: string) => void): void {
+    this.keyDownCallbacks.push(callback);
+  }
+
   handleKeyDown(key: string): void {
     const direction = KEY_MAP[key.toLowerCase()];
     if (direction) {
       this.keys.add(direction);
+    }
+    for (const cb of this.keyDownCallbacks) {
+      cb(key);
     }
   }
 
