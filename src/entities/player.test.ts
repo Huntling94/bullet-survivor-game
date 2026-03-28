@@ -77,6 +77,18 @@ describe("Player", () => {
     expect(player.position.x).toBeCloseTo(100);
   });
 
+  it("modified speed affects movement", () => {
+    const player = new Player();
+    player.speed = 400;
+    player.update(1, { ...noInput(), right: true });
+    expect(player.position.x).toBeCloseTo(400);
+  });
+
+  it("has default pickup radius", () => {
+    const player = new Player();
+    expect(player.pickupRadius).toBe(100);
+  });
+
   it("starts with full health", () => {
     const player = new Player();
     expect(player.health).toBe(player.maxHealth);

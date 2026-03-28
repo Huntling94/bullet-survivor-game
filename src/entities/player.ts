@@ -2,10 +2,11 @@ import { Vector2 } from "../utils/vector2";
 import { InputState } from "../systems/input";
 import { Entity } from "./types";
 
-const PLAYER_SPEED = 200;
+const DEFAULT_SPEED = 200;
 const PLAYER_RADIUS = 16;
 const PLAYER_COLOR = "#4fc3f7";
-const PLAYER_MAX_HEALTH = 100;
+const DEFAULT_MAX_HEALTH = 100;
+const DEFAULT_PICKUP_RADIUS = 100;
 const HEALTH_BAR_WIDTH = 32;
 const HEALTH_BAR_HEIGHT = 4;
 const HEALTH_BAR_OFFSET_Y = -24;
@@ -17,8 +18,10 @@ const FLICKER_RATE = 10;
 export class Player implements Entity {
   position: Vector2;
   readonly radius: number = PLAYER_RADIUS;
-  readonly maxHealth: number = PLAYER_MAX_HEALTH;
-  health: number = PLAYER_MAX_HEALTH;
+  maxHealth: number = DEFAULT_MAX_HEALTH;
+  health: number = DEFAULT_MAX_HEALTH;
+  speed: number = DEFAULT_SPEED;
+  pickupRadius: number = DEFAULT_PICKUP_RADIUS;
   active: boolean = true;
   invincibilityTimer: number = 0;
 
@@ -50,7 +53,7 @@ export class Player implements Entity {
     if (input.right) dx += 1;
 
     const direction = new Vector2(dx, dy).normalize();
-    this.position = this.position.add(direction.scale(PLAYER_SPEED * dt));
+    this.position = this.position.add(direction.scale(this.speed * dt));
   }
 
   render(ctx: CanvasRenderingContext2D): void {
