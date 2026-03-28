@@ -284,6 +284,15 @@ export class Game {
     ctx.font = HUD_FONT;
     ctx.textAlign = "right";
     ctx.fillText(`Lv ${this.leveling.level}`, barX - 8, barY + XP_BAR_HEIGHT);
+
+    ctx.textAlign = "center";
+    ctx.fillStyle = "#ddd";
+    ctx.font = "12px monospace";
+    ctx.fillText(
+      `${this.leveling.currentXp} / ${this.leveling.xpToNextLevel} XP`,
+      barX + barWidth / 2,
+      barY + XP_BAR_HEIGHT,
+    );
     ctx.textAlign = "start";
   }
 
