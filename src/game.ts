@@ -1,9 +1,16 @@
 import { Player } from "./entities/player";
 import { Enemy, ENEMY_CONFIGS } from "./entities/enemy";
+import { Projectile } from "./entities/projectile";
+import { Weapon } from "./entities/weapon";
 import { Camera } from "./systems/camera";
 import { InputState } from "./systems/input";
 import { Spawner } from "./systems/spawner";
-import { checkPlayerEnemyCollisions } from "./systems/collision";
+import {
+  checkPlayerEnemyCollisions,
+  checkProjectileEnemyCollisions,
+  findNearestEnemy,
+} from "./systems/collision";
+import { ObjectPool } from "./utils/object-pool";
 
 const FPS_UPDATE_INTERVAL = 0.5;
 const FPS_FONT = "14px monospace";
@@ -17,6 +24,7 @@ const FPS_X = 10;
 const FPS_Y = 20;
 const WAVE_HUD_X = 10;
 const WAVE_HUD_Y = 40;
+const INITIAL_POOL_SIZE = 20;
 
 export class Game {
   width: number;
@@ -26,6 +34,8 @@ export class Game {
   readonly player: Player;
   readonly camera: Camera;
   readonly spawner: Spawner;
+  readonly weapon: Weapon;
+  readonly projectilePool: ObjectPool<Projectile>;
   enemies: Enemy[] = [];
   gameOver: boolean = false;
   private survivalTime: number = 0;
@@ -41,6 +51,12 @@ export class Game {
     this.player = new Player();
     this.camera = new Camera();
     this.spawner = new Spawner();
+    this.weapon = new Weapon();
+    this.projectilePool = new ObjectPool<Projectile>(
+      () => new Projectile(),
+      (p) => p.deactivate(),
+      INITIAL_POOL_SIZE,
+    );
   }
 
   resize(width: number, height: number): void {
@@ -53,6 +69,31 @@ export class Game {
 
     this.player.update(dt, this.input);
     this.survivalTime += dt;
+
+    // Weapon auto-fire
+    this.weapon.update(dt);
+    if (this.weapon.canFire()) {
+      const target = findNearestEnemy(this.player.position, this.enemies);
+      if (target) {
+        const direction = target.position
+          .subtract(this.player.position)
+          .normalize();
+        const projectile = this.projectilePool.acquire();
+        projectile.activate(
+          this.player.position,
+          direction,
+          {
+            speed: this.weapon.stats.projectileSpeed,
+            damage: this.weapon.stats.damage,
+            maxRange: this.weapon.stats.range,
+            radius: this.weapon.stats.projectileRadius,
+            color: "#ffeb3b",
+          },
+          this.weapon.stats.pierce,
+        );
+        this.weapon.resetFireTimer();
+      }
+    }
 
     // Spawn enemies
     const activeCount = this.enemies.filter((e) => e.active).length;
@@ -72,6 +113,24 @@ export class Game {
       enemy.update(dt, this.player.position);
     }
 
+    // Update projectiles
+    for (const projectile of this.projectilePool.getActive()) {
+      projectile.update(dt);
+    }
+
+    // Projectile-enemy collision
+    checkProjectileEnemyCollisions(
+      this.projectilePool.getActive(),
+      this.enemies,
+    );
+
+    // Release inactive projectiles back to pool
+    for (const projectile of [...this.projectilePool.getActive()]) {
+      if (!projectile.active) {
+        this.projectilePool.release(projectile);
+      }
+    }
+
     // Despawn far enemies
     const despawnRadius = this.spawner.getDespawnRadius(
       this.width,
@@ -89,7 +148,7 @@ export class Game {
     // Remove inactive enemies from array
     this.enemies = this.enemies.filter((e) => e.active);
 
-    // Collision
+    // Player-enemy collision
     checkPlayerEnemyCollisions(this.player, this.enemies);
 
     // Check death
@@ -150,6 +209,9 @@ export class Game {
     // World space rendering (inside camera transform)
     this.camera.applyTransform(ctx, this.width, this.height);
     this.renderGrid(ctx);
+    for (const projectile of this.projectilePool.getActive()) {
+      projectile.render(ctx);
+    }
     for (const enemy of this.enemies) {
       enemy.render(ctx);
     }

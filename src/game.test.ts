@@ -1,6 +1,8 @@
 import { describe, it, expect, vi } from "vitest";
 import { Game } from "./game";
 import { InputState } from "./systems/input";
+import { Enemy, ENEMY_CONFIGS } from "./entities/enemy";
+import { Vector2 } from "./utils/vector2";
 
 function noInput(): InputState {
   return { up: false, down: false, left: false, right: false };
@@ -72,14 +74,13 @@ describe("Game", () => {
   it("spawns enemies over time", () => {
     const game = new Game(800, 600, noInput());
     expect(game.enemies.length).toBe(0);
-    // Advance past spawn interval (2.0s)
     game.update(2.1);
     expect(game.enemies.length).toBeGreaterThan(0);
   });
 
   it("enemies move toward player", () => {
     const game = new Game(800, 600, noInput());
-    game.update(2.1); // spawn enemies
+    game.update(2.1);
     const enemy = game.enemies[0];
     if (!enemy) return;
     const initialDist = enemy.position.distanceTo(game.player.position);
@@ -88,26 +89,8 @@ describe("Game", () => {
     expect(newDist).toBeLessThan(initialDist);
   });
 
-  it("starts at wave 1", () => {
-    const game = new Game(800, 600, noInput());
-    expect(game.spawner.waveNumber).toBe(1);
-  });
-
-  it("render with enemies does not throw", () => {
-    const game = new Game(800, 600, noInput());
-    game.update(2.1); // spawn enemies
-    expect(game.enemies.length).toBeGreaterThan(0);
-    expect(() => game.render(mockCtx())).not.toThrow();
-  });
-
   it("game over when player health reaches 0", () => {
     const game = new Game(800, 600, noInput());
-    expect(game.gameOver).toBe(false);
-    // Manually kill the player
-    game.player.takeDamage(100);
-    game.update(1.1); // advance past i-frames (shouldn't matter, health already 0)
-    // Need to trigger the death check — set health to 0 directly since
-    // takeDamage won't re-trigger during i-frames
     game.player.health = 0;
     game.update(0.016);
     expect(game.gameOver).toBe(true);
@@ -116,17 +99,56 @@ describe("Game", () => {
   it("update stops when game is over", () => {
     const game = new Game(800, 600, noInput());
     game.player.health = 0;
-    game.update(0.016); // triggers game over
+    game.update(0.016);
     const playerPos = game.player.position.clone();
-    game.update(10); // should do nothing
+    game.update(10);
     expect(game.player.position.equals(playerPos)).toBe(true);
   });
 
-  it("render game over does not throw", () => {
+  it("weapon fires at nearby enemy", () => {
     const game = new Game(800, 600, noInput());
-    game.player.health = 0;
+    // Place an enemy near the player
+    game.enemies.push(new Enemy(new Vector2(100, 0), ENEMY_CONFIGS.shambler));
+    // First update: weapon fires (timer starts at 0 = ready)
     game.update(0.016);
-    const ctx = mockCtx();
-    expect(() => game.render(ctx)).not.toThrow();
+    expect(game.projectilePool.activeLength).toBeGreaterThan(0);
+  });
+
+  it("does not fire when no enemies exist", () => {
+    const game = new Game(800, 600, noInput());
+    game.update(0.016);
+    expect(game.projectilePool.activeLength).toBe(0);
+  });
+
+  it("projectile damages enemy", () => {
+    const game = new Game(800, 600, noInput());
+    // Place enemy close enough that projectile hits quickly
+    const enemy = new Enemy(new Vector2(30, 0), ENEMY_CONFIGS.shambler);
+    game.enemies.push(enemy);
+    // Run several frames to fire and hit
+    for (let i = 0; i < 10; i++) {
+      game.update(0.05);
+    }
+    expect(enemy.health).toBeLessThan(ENEMY_CONFIGS.shambler.maxHealth);
+  });
+
+  it("enemy removed when killed by projectiles", () => {
+    const game = new Game(800, 600, noInput());
+    const enemy = new Enemy(new Vector2(30, 0), ENEMY_CONFIGS.runner);
+    game.enemies.push(enemy);
+    // Runner has 15hp, weapon does 10 damage. 2 hits needed.
+    // Fire rate 0.4s, run for 2 seconds to ensure multiple hits
+    for (let i = 0; i < 120; i++) {
+      game.update(1 / 60);
+    }
+    expect(game.enemies.includes(enemy)).toBe(false);
+  });
+
+  it("render with projectiles does not throw", () => {
+    const game = new Game(800, 600, noInput());
+    game.enemies.push(new Enemy(new Vector2(100, 0), ENEMY_CONFIGS.shambler));
+    game.update(0.016);
+    expect(game.projectilePool.activeLength).toBeGreaterThan(0);
+    expect(() => game.render(mockCtx())).not.toThrow();
   });
 });

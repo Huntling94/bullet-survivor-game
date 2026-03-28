@@ -4,7 +4,7 @@ import { EnemyType } from "../entities/enemy";
 const INITIAL_SPAWN_INTERVAL = 2.0;
 const MIN_SPAWN_INTERVAL = 0.4;
 const SPAWN_INTERVAL_DECAY = 0.85;
-const MAX_ENEMIES_BASE = 30;
+const MAX_ENEMIES_BASE = 50;
 const MAX_ENEMIES_PER_WAVE = 5;
 const WAVE_DURATION = 30;
 const SPAWN_MARGIN = 50;
