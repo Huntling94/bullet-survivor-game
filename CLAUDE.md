@@ -191,7 +191,7 @@ Step 6 is the most important step for learning. Spend the most time here.
 | F-003 | Enemy spawning and wave system                 | Complete    |
 | F-004 | Projectile system with auto-aim                | Complete    |
 | F-005 | XP gems, leveling, upgrade selection           | Complete    |
-| F-006 | Juice: screen shake, particles, damage numbers | Not started |
+| F-006 | Juice: screen shake, particles, damage numbers | Complete    |
 | F-007 | Polish: enemy variety, wave scaling, game over | Not started |
 
 ## What Will should understand after this project
