@@ -6,6 +6,10 @@ const HEALTH_BAR_HEIGHT = 3;
 const HEALTH_BAR_OFFSET_Y = -16;
 const HEALTH_BAR_BG_COLOR = "#333";
 const HEALTH_BAR_FG_COLOR = "#ef5350";
+const FLASH_DURATION = 0.05;
+const KNOCKBACK_STRENGTH = 200;
+const KNOCKBACK_DECAY = 0.0001;
+const KNOCKBACK_THRESHOLD = 5;
 
 export type EnemyType = "shambler" | "runner";
 
@@ -48,6 +52,8 @@ export class Enemy implements Entity {
   health: number;
   active: boolean = true;
   killed: boolean = false;
+  flashTimer: number = 0;
+  knockbackVelocity: Vector2 = Vector2.ZERO;
 
   constructor(position: Vector2, config: EnemyConfig) {
     this.position = position;
@@ -57,9 +63,15 @@ export class Enemy implements Entity {
     this.health = config.maxHealth;
   }
 
-  takeDamage(amount: number): void {
+  takeDamage(amount: number, knockbackDir?: Vector2): void {
     if (!this.active) return;
     this.health = Math.max(0, this.health - amount);
+    this.flashTimer = FLASH_DURATION;
+    if (knockbackDir) {
+      this.knockbackVelocity = knockbackDir
+        .normalize()
+        .scale(KNOCKBACK_STRENGTH);
+    }
     if (this.health <= 0) {
       this.active = false;
       this.killed = true;
@@ -69,15 +81,31 @@ export class Enemy implements Entity {
   update(dt: number, target: Vector2): void {
     if (!this.active) return;
 
-    const direction = target.subtract(this.position).normalize();
-    this.position = this.position.add(direction.scale(this.config.speed * dt));
+    // Decay flash
+    if (this.flashTimer > 0) {
+      this.flashTimer = Math.max(0, this.flashTimer - dt);
+    }
+
+    // Apply and decay knockback
+    if (this.knockbackVelocity.magnitude() > KNOCKBACK_THRESHOLD) {
+      this.position = this.position.add(this.knockbackVelocity.scale(dt));
+      const decay = Math.pow(KNOCKBACK_DECAY, dt);
+      this.knockbackVelocity = this.knockbackVelocity.scale(decay);
+    } else {
+      this.knockbackVelocity = Vector2.ZERO;
+      // Chase player only when not being knocked back
+      const direction = target.subtract(this.position).normalize();
+      this.position = this.position.add(
+        direction.scale(this.config.speed * dt),
+      );
+    }
   }
 
   render(ctx: CanvasRenderingContext2D): void {
     if (!this.active) return;
 
-    // Enemy circle
-    ctx.fillStyle = this.config.color;
+    // Enemy circle — white flash on hit
+    ctx.fillStyle = this.flashTimer > 0 ? "#fff" : this.config.color;
     ctx.beginPath();
     ctx.arc(this.position.x, this.position.y, this.radius, 0, Math.PI * 2);
     ctx.fill();

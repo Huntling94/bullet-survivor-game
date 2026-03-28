@@ -100,6 +100,39 @@ describe("Enemy", () => {
     expect(enemy.health).toBe(30);
   });
 
+  it("takeDamage triggers flash", () => {
+    const enemy = new Enemy(Vector2.ZERO, ENEMY_CONFIGS.shambler);
+    enemy.takeDamage(10);
+    expect(enemy.flashTimer).toBeGreaterThan(0);
+  });
+
+  it("flash decays over time", () => {
+    const enemy = new Enemy(Vector2.ZERO, ENEMY_CONFIGS.shambler);
+    enemy.takeDamage(10);
+    enemy.update(0.1, Vector2.ZERO);
+    expect(enemy.flashTimer).toBe(0);
+  });
+
+  it("knockback pushes enemy away", () => {
+    const enemy = new Enemy(new Vector2(50, 0), ENEMY_CONFIGS.shambler);
+    enemy.takeDamage(10, new Vector2(1, 0)); // push rightward
+    enemy.update(0.016, Vector2.ZERO);
+    expect(enemy.position.x).toBeGreaterThan(50);
+  });
+
+  it("knockback decays and enemy resumes chase", () => {
+    const enemy = new Enemy(new Vector2(100, 0), ENEMY_CONFIGS.shambler);
+    enemy.takeDamage(10, new Vector2(1, 0));
+    // After long enough, knockback decays and enemy chases again
+    for (let i = 0; i < 60; i++) {
+      enemy.update(1 / 60, Vector2.ZERO);
+    }
+    // Should be moving toward target (0,0) eventually
+    const pos1 = enemy.position.x;
+    enemy.update(0.5, Vector2.ZERO);
+    expect(enemy.position.x).toBeLessThan(pos1);
+  });
+
   it("render does not throw", () => {
     const enemy = new Enemy(Vector2.ZERO, ENEMY_CONFIGS.shambler);
     expect(() => enemy.render(mockCtx())).not.toThrow();
