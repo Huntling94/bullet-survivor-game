@@ -66,6 +66,33 @@ describe("Enemy", () => {
     expect(ENEMY_CONFIGS.shambler.color).not.toBe(ENEMY_CONFIGS.runner.color);
   });
 
+  it("takeDamage reduces health", () => {
+    const enemy = new Enemy(Vector2.ZERO, ENEMY_CONFIGS.shambler);
+    enemy.takeDamage(10);
+    expect(enemy.health).toBe(20);
+    expect(enemy.active).toBe(true);
+  });
+
+  it("takeDamage kills enemy at zero health", () => {
+    const enemy = new Enemy(Vector2.ZERO, ENEMY_CONFIGS.shambler);
+    enemy.takeDamage(30);
+    expect(enemy.health).toBe(0);
+    expect(enemy.active).toBe(false);
+  });
+
+  it("takeDamage clamps health to zero", () => {
+    const enemy = new Enemy(Vector2.ZERO, ENEMY_CONFIGS.shambler);
+    enemy.takeDamage(999);
+    expect(enemy.health).toBe(0);
+  });
+
+  it("takeDamage is no-op when inactive", () => {
+    const enemy = new Enemy(Vector2.ZERO, ENEMY_CONFIGS.shambler);
+    enemy.active = false;
+    enemy.takeDamage(10);
+    expect(enemy.health).toBe(30);
+  });
+
   it("render does not throw", () => {
     const enemy = new Enemy(Vector2.ZERO, ENEMY_CONFIGS.shambler);
     expect(() => enemy.render(mockCtx())).not.toThrow();

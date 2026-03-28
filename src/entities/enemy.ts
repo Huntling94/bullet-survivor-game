@@ -53,6 +53,14 @@ export class Enemy implements Entity {
     this.health = config.maxHealth;
   }
 
+  takeDamage(amount: number): void {
+    if (!this.active) return;
+    this.health = Math.max(0, this.health - amount);
+    if (this.health <= 0) {
+      this.active = false;
+    }
+  }
+
   update(dt: number, target: Vector2): void {
     if (!this.active) return;
 
