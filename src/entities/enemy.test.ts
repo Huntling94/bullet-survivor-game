@@ -57,13 +57,28 @@ describe("Enemy", () => {
     expect(enemy.position.x).toBe(100);
   });
 
-  it("shambler and runner have different configs", () => {
-    expect(ENEMY_CONFIGS.shambler.speed).not.toBe(ENEMY_CONFIGS.runner.speed);
-    expect(ENEMY_CONFIGS.shambler.radius).not.toBe(ENEMY_CONFIGS.runner.radius);
-    expect(ENEMY_CONFIGS.shambler.maxHealth).not.toBe(
-      ENEMY_CONFIGS.runner.maxHealth,
-    );
-    expect(ENEMY_CONFIGS.shambler.color).not.toBe(ENEMY_CONFIGS.runner.color);
+  it("all four enemy types have different configs", () => {
+    const types = Object.values(ENEMY_CONFIGS);
+    const speeds = types.map((c) => c.speed);
+    expect(new Set(speeds).size).toBe(4);
+  });
+
+  it("tank config has high HP", () => {
+    expect(ENEMY_CONFIGS.tank.maxHealth).toBe(100);
+    expect(ENEMY_CONFIGS.tank.speed).toBe(40);
+  });
+
+  it("swarm config is fast and fragile", () => {
+    expect(ENEMY_CONFIGS.swarm.speed).toBe(150);
+    expect(ENEMY_CONFIGS.swarm.maxHealth).toBe(8);
+    expect(ENEMY_CONFIGS.swarm.radius).toBe(5);
+  });
+
+  it("statScale multiplies health and speed", () => {
+    const enemy = new Enemy(Vector2.ZERO, ENEMY_CONFIGS.shambler, 1.5);
+    expect(enemy.maxHealth).toBe(45); // 30 * 1.5
+    expect(enemy.health).toBe(45);
+    expect(enemy.speed).toBeCloseTo(90); // 60 * 1.5
   });
 
   it("takeDamage reduces health", () => {

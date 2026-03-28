@@ -178,7 +178,9 @@ export class Game {
       activeCount,
     );
     for (const inst of instructions) {
-      this.enemies.push(new Enemy(inst.position, ENEMY_CONFIGS[inst.type]));
+      this.enemies.push(
+        new Enemy(inst.position, ENEMY_CONFIGS[inst.type], inst.statScale),
+      );
     }
 
     // Wave start detection

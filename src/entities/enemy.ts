@@ -11,7 +11,7 @@ const KNOCKBACK_STRENGTH = 200;
 const KNOCKBACK_DECAY = 0.0001;
 const KNOCKBACK_THRESHOLD = 5;
 
-export type EnemyType = "shambler" | "runner";
+export type EnemyType = "shambler" | "runner" | "tank" | "swarm";
 
 export interface EnemyConfig {
   readonly type: EnemyType;
@@ -42,6 +42,24 @@ export const ENEMY_CONFIGS: Record<EnemyType, EnemyConfig> = {
     damage: 5,
     xpValue: 1,
   },
+  tank: {
+    type: "tank",
+    speed: 40,
+    radius: 18,
+    maxHealth: 100,
+    color: "#7b1fa2",
+    damage: 20,
+    xpValue: 8,
+  },
+  swarm: {
+    type: "swarm",
+    speed: 150,
+    radius: 5,
+    maxHealth: 8,
+    color: "#66bb6a",
+    damage: 3,
+    xpValue: 1,
+  },
 };
 
 export class Enemy implements Entity {
@@ -49,18 +67,20 @@ export class Enemy implements Entity {
   readonly radius: number;
   readonly maxHealth: number;
   readonly config: EnemyConfig;
+  readonly speed: number;
   health: number;
   active: boolean = true;
   killed: boolean = false;
   flashTimer: number = 0;
   knockbackVelocity: Vector2 = Vector2.ZERO;
 
-  constructor(position: Vector2, config: EnemyConfig) {
+  constructor(position: Vector2, config: EnemyConfig, statScale: number = 1) {
     this.position = position;
     this.config = config;
     this.radius = config.radius;
-    this.maxHealth = config.maxHealth;
-    this.health = config.maxHealth;
+    this.speed = config.speed * statScale;
+    this.maxHealth = Math.round(config.maxHealth * statScale);
+    this.health = this.maxHealth;
   }
 
   takeDamage(amount: number, knockbackDir?: Vector2): void {
@@ -95,9 +115,7 @@ export class Enemy implements Entity {
       this.knockbackVelocity = Vector2.ZERO;
       // Chase player only when not being knocked back
       const direction = target.subtract(this.position).normalize();
-      this.position = this.position.add(
-        direction.scale(this.config.speed * dt),
-      );
+      this.position = this.position.add(direction.scale(this.speed * dt));
     }
   }
 
